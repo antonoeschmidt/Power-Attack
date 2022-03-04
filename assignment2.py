@@ -1,6 +1,9 @@
 import csv
 from numpy import transpose
 
+# For testing
+from scipy.stats.stats import pearsonr
+
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -90,7 +93,10 @@ def find_best_match(h, t):
     key = -1
     for i in range(len(h)):
         for j in range(len(t)):
-            corr = pearson_coef(h[i], t[j])
+            # corr = pearson_coef(h[i], t[j])
+
+            # Testing with Scipy pearson
+            corr, _ = pearsonr(h[i], t[j])
             if (abs(corr) > max):
                 max = abs(corr)
                 key = i
