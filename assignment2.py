@@ -25,13 +25,13 @@ Sbox = (
 
 def read_data():
     input = []
-    with open('inputs8.dat') as csv_file:
+    with open('inputs_test.dat') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             input = row
 
     data = []
-    with open('T8.dat') as csv_file:
+    with open('T_test.dat') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             data.append(row)
@@ -69,7 +69,10 @@ def generate_t(data):
     data = transpose(data)
     t = []
     for d in data:
-        t.append(calculate_hamming(d))
+        col = []
+        for entry in d:
+            col.append(float(entry))
+        t.append(col)
     return t
 
 def pearson_coef(x, y):
