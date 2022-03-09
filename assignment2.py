@@ -1,6 +1,7 @@
 import csv
 from numpy import transpose
 
+""" S-Box from AES-256"""
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -20,91 +21,101 @@ Sbox = (
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 )
 
-def read_data(input_file, data_file):
+def read_data(input_file, observed_output_file):
+    """ Reading of input and data file. The input comes as the plain-text provided.
+        The data file contains the observed data from the Power Output. """
     input = []
     with open(input_file) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             input = row
 
-    data = []
-    with open(data_file) as csv_file:
+    observed_output = []
+    with open(observed_output_file) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
-            data.append(row)
+            observed_output.append(row)
     
-    return input, data
+    return input, observed_output
 
 def generate_keys():
-    keys = [x for x in range(256)]
+    keys = [key for key in range(256)]
     return keys
 
 def encrypt(input, key):
-    cipher = []
+    """ Simulates the S-Box computation of the first of AES """
+    cipher_text = []
     for i in input:
-        cipher.append(Sbox[int(i) ^ key])
-    return cipher
+        cipher_text.append(Sbox[int(i) ^ key])
+    return cipher_text
 
-def calculate_hamming(ciphers):
-    consumption = []
-    for cipher in ciphers:
-        cipher = int(cipher) # Converting strings to numbers and then to integers
-        consumption.append(bin(cipher).count("1"))
-    return consumption
+def calculate_hamming(encrypted_input):
+    """ Calculates the Hamming Weigth of each entry to an encrypted row of input.
+        The function returns a list of Hamming Weigths """
+    hamming_weigths = []
+    for enc in encrypted_input:
+        enc = int(enc) # Converting strings to integers
+        hamming_weigths.append(bin(enc).count("1"))
+    return hamming_weigths
 
 def generate_h(input, keys):
-    ciphers = []
+    encrypted_inputs = []
     for key in keys:
-        ciphers.append(encrypt(input, key))
+        encrypted_inputs.append(encrypt(input, key))
     
     h = []
-    for c in ciphers:
-        h.append(calculate_hamming(c))
+    for encrypted_input in encrypted_inputs:
+        h.append(calculate_hamming(encrypted_input))
     return h
 
-def generate_t(data):
-    data = transpose(data)
+def generate_t(observed_output):
+    """ Transposing our observed output, so we can iterate column-wise
+        and converting it into floats """
+    observed_output = transpose(observed_output)
     t = []
-    for d in data:
+    for d in observed_output:
         col = []
         for entry in d:
             col.append(float(entry))
         t.append(col)
     return t
-   
 
 def pearson_coef(x, y):
-  N = len(x)
-  
-  sum_x = float(sum(x))
-  sum_y = float(sum(y))
-  sum_x_sq = sum(x_i * x_i for x_i in x)
-  sum_y_sq = sum(y_i * y_i for y_i in y)
-  psum = sum(x_i * y_i for x_i, y_i in zip(x, y))
-  
-  # Top of fraction
-  top = psum - (sum_x * sum_y/N)
-  # Buttom of fraction
-  buttom = pow((sum_x_sq - pow(sum_x, 2) / N) * (sum_y_sq - pow(sum_y, 2) / N), 0.5)
+    """ Calculates the Pearson coefficient for a column of h and T """
+    N = len(x)
 
-  return top / buttom
+    sum_x = float(sum(x))
+    sum_y = float(sum(y))
+    sum_x_sq = sum(x_i * x_i for x_i in x)
+    sum_y_sq = sum(y_i * y_i for y_i in y)
+    psum = sum(x_i * y_i for x_i, y_i in zip(x, y))
+
+    # Top of fraction
+    top = psum - (sum_x * sum_y / N)
+    # Buttom of fraction
+    buttom = pow((sum_x_sq - pow(sum_x, 2) / N) * (sum_y_sq - pow(sum_y, 2) / N), 0.5)
+
+    return top / buttom
 
 def find_best_match(h, t):
-    max = 0
+    """ Calculates the Pearson coefficient for all columns in T with all possible keys.
+        When a new highest absolute Pearson coefficient is found, the value is saved a max and 
+        the key is saved. """
+    max_corr = 0
     key = -1
-    for i in range(len(h)):
-        for j in range(len(t)):
+    for i in range(len(h)): # Iterates over all 256 keys
+        for j in range(len(t)): # Iterates over all 55 columns of T
             corr = pearson_coef(h[i], t[j])
-            if (abs(corr) > max):
-                max = abs(corr)
+            if (abs(corr) > max_corr):
+                max_corr = abs(corr)
                 key = i
     
-    return max, key
+    return max_corr, key
 
-input, data = read_data('inputs8.dat', 'T8.dat')
+input, observed_output = read_data('inputs8.dat', 'T8.dat')
 keys = generate_keys()
-h = generate_h(input, keys) # 256x600
-t = generate_t(data) # 600 x 55
+h = generate_h(input, keys) # size of h = 256 x 600
+t = generate_t(observed_output) # size of t = 600 x 55
 max, key = find_best_match(h, t)
 
 print(f'Max pearson: {max}')
