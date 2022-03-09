@@ -1,6 +1,9 @@
 import csv
 from numpy import transpose
 
+# For testing
+from scipy.stats.stats import pearsonr
+
 Sbox = (
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -20,15 +23,15 @@ Sbox = (
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16,
 )
 
-def read_data(input_file, data_file):
+def read_data():
     input = []
-    with open(input_file) as csv_file:
+    with open('inputs_test.dat') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             input = row
 
     data = []
-    with open(data_file) as csv_file:
+    with open('T_test.dat') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for row in csv_reader:
             data.append(row)
@@ -48,7 +51,7 @@ def encrypt(input, key):
 def calculate_hamming(ciphers):
     consumption = []
     for cipher in ciphers:
-        cipher = int(cipher) # Converting strings to numbers and then to integers
+        cipher = int(float(cipher)) # Converting strings to numbers and then to integers
         consumption.append(bin(cipher).count("1"))
     return consumption
 
@@ -71,7 +74,6 @@ def generate_t(data):
             col.append(float(entry))
         t.append(col)
     return t
-   
 
 def pearson_coef(x, y):
   N = len(x)
@@ -94,18 +96,21 @@ def find_best_match(h, t):
     key = -1
     for i in range(len(h)):
         for j in range(len(t)):
-            corr = pearson_coef(h[i], t[j])
+            # corr = pearson_coef(h[i], t[j])
+
+            # Testing with Scipy pearson
+            corr, _ = pearsonr(h[i], t[j])
             if (abs(corr) > max):
                 max = abs(corr)
                 key = i
-    
+
     return max, key
 
-input, data = read_data('inputs8.dat', 'T8.dat')
+input, data = read_data()
 keys = generate_keys()
 h = generate_h(input, keys) # 256x600
 t = generate_t(data) # 600 x 55
 max, key = find_best_match(h, t)
 
 print(f'Max pearson: {max}')
-print(f'Best key-match: {hex(keys[key])}')
+print(f'Best key-match: {key}')
